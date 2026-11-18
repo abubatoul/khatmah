@@ -2648,7 +2648,7 @@ let kvRec = null, kvIdx = null, kvPos = -1, kvRestart = 0, kvFirst = true, kvErr
 const kvSleep = (ms) => new Promise((r) => setTimeout(r, ms));
 let kvFix = false;
 let kvLearn = {}; try { kvLearn = JSON.parse(localStorage.getItem('kvlearn') || '{}') || {}; } catch (e) { kvLearn = {}; }
-let kvMU = null, kvPrevBuf = [], kvCurHeard = [];
+let kvMU = null, kvPrevBuf = [], kvCurHeard = [], kvBase = 0, kvFullLen = 0, kvRawLen = 0;
 let kvIdleT = 0;
 const KV_IDLE = 60000; // إيقاف المايك تلقائيًا إذا لم تُسمع قراءة دقيقة
 function kvIdleArm() { clearTimeout(kvIdleT); if (kvOn) kvIdleT = setTimeout(() => { if (kvOn) kvStop('توقف المايك لعدم القراءة'); }, KV_IDLE); }
@@ -2774,9 +2774,9 @@ function kvMark(v, add) {
   v.insertBefore(frag, nodes[0]); nodes.forEach((n) => n.remove()); kvMissedN += fresh;
 }
 async function kvWaitRender(J) { for (let i = 0; i < 80; i++) { if (readerJuz === J && $('readerBody').querySelector('.v')) return true; await kvSleep(100); } return false; }
-function kvReset() { clearTimeout(kvEndT); kvIdx = null; kvPos = -1; kvHits = new Set(); kvFinalN = -1; kvMU = null; if (kvCurV) { kvCurV.classList.remove('cur'); kvCurV = null; } }
+function kvReset(base) { kvCmdPos = Math.max(kvCmdPos, kvRawLen); kvBase = (base === undefined ? kvFullLen : base); kvCurHeard = []; kvPrevBuf = []; clearTimeout(kvEndT); kvIdx = null; kvPos = -1; kvHits = new Set(); kvFinalN = -1; kvMU = null; if (kvCurV) { kvCurV.classList.remove('cur'); kvCurV = null; } }
 async function kvAdvance(force) {
-  if (kvAdv || kvJumping) return; kvAdv = true; kvJumping = true;
+  if (kvAdv || kvJumping) return; kvAdv = true; kvJumping = true; const base0 = kvFullLen;
   try {
     kvBuild(); kvMarkPass(kvIdx.words.length, kvWin());
     const J = readerJuz, btn = $('readerNext');
@@ -2787,7 +2787,7 @@ async function kvAdvance(force) {
     asStop();
     if (!btn.hidden && btn.dataset.act === 'next') onReaderNext(); else await openReader(nx, readerMember);
     await kvWaitRender(nx); $('readerScroll').scrollTop = 0;
-    kvReset(); kvBuild();
+    kvReset(base0); kvBuild();
     kvMsg('الجزء ' + arDigits(nx) + '. تابع القراءة'); jumpToast('الجزء ' + arDigits(nx));
   } finally { kvJumping = false; kvAdv = false; kvMiss = 0; }
 }
@@ -2811,20 +2811,21 @@ function kvSurahByName(txt) {
   for (let n = 1; n <= 114; n++) { const nm = c(RD_NAMES[n - 1]); if (nm === t || (t.length >= 4 && kvEq(t, nm))) return n; }
   return 0;
 }
-async function kvGoTo(S, A) {
-  if (kvJumping) return; kvJumping = true;
+async function kvGoTo(S, A, base) {
+  if (kvJumping) return; kvJumping = true; if (base === undefined) base = kvFullLen;
   try {
     if (!RD_AYAH_JUZ[S + ':' + A]) A = 1;
     const J = RD_AYAH_JUZ[S + ':' + A];
     asStop();
     await openReader(J, readerMember, { s: S, a: A });
-    await kvWaitRender(J); kvReset(); kvBuild();
+    await kvWaitRender(J); kvReset(base); kvBuild();
     kvMsg('الانتقال إلى سورة ' + RD_NAMES[S - 1] + ' · آية ' + arDigits(A)); jumpToast('سورة ' + RD_NAMES[S - 1] + ' · الجزء ' + arDigits(J));
   } finally { kvJumping = false; kvMiss = 0; }
 }
-async function kvGoJuz(J, tries) {
-  if (kvJumping) { if ((tries || 0) < 8) setTimeout(() => kvGoJuz(J, (tries || 0) + 1), 500); return; } kvJumping = true;
-  try { asStop(); await openReader(J, readerMember); await kvWaitRender(J); $('readerScroll').scrollTop = 0; kvReset(); kvBuild(); kvMsg('الانتقال إلى الجزء ' + arDigits(J)); jumpToast('الجزء ' + arDigits(J)); }
+async function kvGoJuz(J, tries, base) {
+  if (base === undefined) base = kvFullLen;
+  if (kvJumping) { if ((tries || 0) < 8) setTimeout(() => kvGoJuz(J, (tries || 0) + 1, base), 500); return; } kvJumping = true;
+  try { asStop(); await openReader(J, readerMember); await kvWaitRender(J); $('readerScroll').scrollTop = 0; kvReset(base); kvBuild(); kvMsg('الانتقال إلى الجزء ' + arDigits(J)); jumpToast('الجزء ' + arDigits(J)); }
   finally { kvJumping = false; kvMiss = 0; }
 }
 function kvCommand(txt) {
@@ -2847,10 +2848,10 @@ function kvCommand(txt) {
       const N = kvNumOf(rest.split(' ').slice(0, 3).join(' ')); if (!(N >= 1 && N <= 30)) return false;
       clearTimeout(kvCmdT);
       const delay = (!/^\d+$/.test(rest.split(' ')[0]) && N < 10) ? 2000 : 900;
-      const L1 = raw.length; kvCmdT = setTimeout(() => { if (!kvOn) return; kvCmdPos = L1; kvLastJuz = { N, t: Date.now() }; kvGoJuz(N); }, delay); return true;
+      const L1 = raw.length, B1 = kvFullLen; kvCmdT = setTimeout(() => { if (!kvOn) return; kvCmdPos = L1; kvLastJuz = { N, t: Date.now() }; kvGoJuz(N, 0, B1); }, delay); return true;
     }
     if (kvLastJuz && kvLastJuz.N < 10 && Date.now() - kvLastJuz.t < 8000) {
-      const v = kvNumStrict(tail); if ((v === 10 || v === 20 || v === 30) && kvLastJuz.N + v <= 30) { const N2 = kvLastJuz.N + v; kvLastJuz = null; kvCmdPos = raw.length; kvGoJuz(N2); return true; }
+      const v = kvNumStrict(tail); if ((v === 10 || v === 20 || v === 30) && kvLastJuz.N + v <= 30) { const N2 = kvLastJuz.N + v; kvLastJuz = null; kvCmdPos = raw.length; kvGoJuz(N2, 0, kvFullLen); return true; }
     }
   }
   if (false) { let N = 0;
@@ -2860,8 +2861,8 @@ function kvCommand(txt) {
     clearTimeout(kvCmdT);
     const S = kvSurahByName(m[1]); if (!S) return false;
     const A = m[2] ? (kvNumOf(m[2]) || 1) : 1;
-    const L0 = raw.length;
-    kvCmdT = setTimeout(() => { if (!kvOn) return; kvCmdPos = L0; kvGoTo(S, A); }, 900);
+    const L0 = raw.length, B0 = kvFullLen;
+    kvCmdT = setTimeout(() => { if (!kvOn) return; kvCmdPos = L0; kvGoTo(S, A, B0); }, 900);
     return true;
   }
   return false;
@@ -2869,7 +2870,9 @@ function kvCommand(txt) {
 function kvHandle(e) {
   if (kvJumping) return;
   let txt = ''; for (let i = 0; i < e.results.length; i++) txt += ' ' + e.results[i][0].transcript;
-  const heard = kvNormD(txt).split(' ').filter(Boolean); if (!heard.length) return;
+  const rawN = kvNormD(txt), all = rawN.split(' ').filter(Boolean); kvFullLen = all.length; kvRawLen = rawN.length;
+  if (kvBase > all.length) kvBase = all.length;
+  const heard = all.slice(kvBase); if (!heard.length) return;
   kvCurHeard = heard; kvIdleArm();
   kvMsg('المسموع: ' + heard.slice(-6).join(' '));
   kvBuild();
@@ -2934,8 +2937,8 @@ function kvgFind(H, minRun, key) {
   if (best) best.verses = verses;
   return best;
 }
-async function kvJump(p, track) {
-  if (kvJumping) return; kvJumping = true;
+async function kvJump(p, track, base) {
+  if (kvJumping) return; kvJumping = true; if (base === undefined) base = kvFullLen;
   try {
     const S = kvg.s[p], A = kvg.a[p], J = kvg.j[p], K = kvg.k[p];
     asStop();
@@ -2947,7 +2950,7 @@ async function kvJump(p, track) {
       if (e) { e.scrollIntoView({ block: 'center' }); e.classList.add('jump'); setTimeout(() => e.classList.remove('jump'), 2000); }
     }
     if (track && kvOn) {
-      kvIdx = null; kvBuild();
+      kvReset(base); kvBuild();
       let wi = kvIdx.words.findIndex((x) => x.k === K && Number(kvIdx.vs[x.vi].dataset.s) === S && Number(kvIdx.vs[x.vi].dataset.a) === A);
       if (wi < 0) wi = kvIdx.words.findIndex((x) => Number(kvIdx.vs[x.vi].dataset.s) === S && Number(kvIdx.vs[x.vi].dataset.a) === A);
       if (wi >= 0) { kvPos = wi; kvShow(wi); }
@@ -2956,7 +2959,7 @@ async function kvJump(p, track) {
   } finally { kvJumping = false; kvMiss = 0; }
 }
 async function kvTryGlobal(heard, loc) {
-  if (kvgBusy || kvJumping) return; kvgBusy = true;
+  if (kvgBusy || kvJumping) return; kvgBusy = true; const base0 = kvFullLen;
   try {
     if (!kvg) { kvMsg('جارٍ تجهيز البحث…'); await kvgBuild((n) => kvMsg('جارٍ تجهيز البحث… ' + arDigits(n) + ' / ٣٠')); }
     const key = kvCurKey();
@@ -2966,11 +2969,11 @@ async function kvTryGlobal(heard, loc) {
       if (!res) continue;
       if (loc !== undefined) {
         const cw = (kvIdx && kvPos >= 0) ? kvIdx.vs[kvIdx.words[kvPos].vi] : null, ck = cw ? Number(cw.dataset.s) * 1000 + Number(cw.dataset.a) : -1;
-        if (res.run >= Math.max(4, loc + 2) && !(res.verses.size === 1 && res.verses.has(ck))) { if (kvOn) await kvJump(res.end, true); return; }
+        if (res.run >= Math.max(4, loc + 2) && !(res.verses.size === 1 && res.verses.has(ck))) { if (kvOn) await kvJump(res.end, true, base0); return; }
         continue;
       }
       if (res.run >= 4 || (res.verses.size === 1 && res.run >= 2 && H.join('').length >= 6 && kvMiss >= 3)) {
-        if (kvOn) await kvJump(res.end, true);
+        if (kvOn) await kvJump(res.end, true, base0);
         return;
       }
     }
@@ -2979,7 +2982,7 @@ async function kvTryGlobal(heard, loc) {
 }
 function kvStart() {
   if (!KSR) { rdNote('المتصفح لا يدعم التعرف على الصوت.'); return; }
-  asStop(); kvIdx = null; kvBuild(); kvOn = true; kvIdleArm(); $('readerModal').classList.add('vo'); kvPos = -1; kvHits = new Set(); kvFinalN = -1; kvMU = null; kvPrevBuf = []; kvCurHeard = []; kvMissedN = 0; kvCmdPos = 0; kvAdv = false;
+  asStop(); kvIdx = null; kvBuild(); kvOn = true; kvIdleArm(); $('readerModal').classList.add('vo'); kvPos = -1; kvHits = new Set(); kvFinalN = -1; kvMU = null; kvPrevBuf = []; kvCurHeard = []; kvMissedN = 0; kvCmdPos = 0; kvAdv = false; kvBase = 0; kvFullLen = 0; kvRawLen = 0;
   document.querySelectorAll('#readerBody .w.miss').forEach((x) => x.replaceWith(document.createTextNode(x.textContent))); document.querySelectorAll('#readerBody .v').forEach((v) => { v._miss = null; }); $('readerBody').normalize(); kvIdx = null; kvBuild(); kvWakeOn();
   rdCurSet.forEach((v) => v.classList.remove('cur')); rdCurSet = new Set();
   $('rdMicBar').hidden = false; kvMsg('جارٍ تشغيل الميكروفون…');
@@ -2990,7 +2993,7 @@ function kvRun() {
   if (!kvOn) return;
   clearTimeout(kvWatch);
   const r = new KSR(); kvRec = r; r.lang = 'ar-SA'; r.continuous = true; r.interimResults = true; r.maxAlternatives = 1;
-  r.onstart = () => { clearTimeout(kvWatch); kvErrN = 0; kvCmdPos = 0; kvSeen = new Set(); kvPrevBuf = kvPrevBuf.concat(kvCurHeard).slice(-60); kvCurHeard = []; if (kvFirst || /^(جار|إعادة)/.test($('rdMicTxt').textContent)) kvMsg('ابدأ القراءة، أو قل: سورة …'); kvFirst = false; };
+  r.onstart = () => { clearTimeout(kvWatch); kvErrN = 0; kvCmdPos = 0; kvBase = 0; kvFullLen = 0; kvRawLen = 0; kvSeen = new Set(); kvPrevBuf = kvPrevBuf.concat(kvCurHeard).slice(-60); kvCurHeard = []; if (kvFirst || /^(جار|إعادة)/.test($('rdMicTxt').textContent)) kvMsg('ابدأ القراءة، أو قل: سورة …'); kvFirst = false; };
   r.onspeechstart = () => { kvIdleArm(); if (/^(ابدأ|إعادة)/.test($('rdMicTxt').textContent)) kvMsg('جارٍ الاستماع…'); };
   r.onresult = (e) => { kvErrN = 0; kvHandle(e); };
   r.onnomatch = () => { kvMsg('أعد القراءة'); };
