@@ -203,6 +203,10 @@ h3 { font-size: 1.25rem; }
   border-radius: 12px;
   background: var(--gold-bg);
 }
+.tt-btn { width: 100%; min-height: 50px; margin-top: 14px; font-size: 1.1rem; }
+.tt-btn.done { background: var(--green); border-color: var(--green); color: var(--accent-fg); }
+.tt-text { white-space: pre-line; font-size: 1.15rem; line-height: 2.2; padding: 4px 2px 12px; }
+.tt-done-note { text-align: center; color: var(--green); font-weight: 700; margin: 0 0 8px; }
 .amal-btn { width: 100%; min-height: 50px; font-family: Arial, Tahoma, sans-serif; font-size: 1.1rem; }
 
 .amal-sheet { font-family: Arial, Tahoma, sans-serif; max-height: calc(100vh - 32px); }
@@ -308,13 +312,6 @@ h3 { font-size: 1.25rem; }
 .reader-body .sjd.w { background: var(--accent); color: var(--accent-fg); }
 .reader-body .ayah { color: var(--gold); font-size: .7em; white-space: nowrap; padding-inline: .1em; }
 .reader-body .v.cur, .reader-body .v.jump { background: rgba(14, 106, 86, .12); background: color-mix(in srgb, var(--accent) 14%, transparent); -webkit-box-decoration-break: clone; box-decoration-break: clone; }
-.amal-head.hid { display: none; }
-#rdLabel { position: fixed; top: calc(env(safe-area-inset-top, 0px) + 6px); left: 50%; transform: translateX(-50%); z-index: 50; background: var(--surface); color: var(--muted); border: 1px solid var(--line); border-radius: 999px; padding: 2px 14px; font-size: 13px; opacity: .92; white-space: nowrap; }
-#rdLabel[hidden], #jToast[hidden] { display: none; }
-#jToast { position: fixed; top: 38%; left: 50%; transform: translateX(-50%); z-index: 60; background: var(--accent, #1f6f54); color: #fff; border-radius: 14px; padding: 11px 22px; font-size: 18px; box-shadow: 0 6px 24px rgba(0,0,0,.25); pointer-events: none; white-space: nowrap; }
-#readerModal.vo #asBar { display: none; }
-#rdFix { display: none !important; }
-#readerScroll { touch-action: manipulation; }
 .reader-body .w.miss { background: rgba(255, 140, 0, .38); border-radius: 4px; -webkit-box-decoration-break: clone; box-decoration-break: clone; }
 .reader-body .v.jump { box-shadow: 0 0 0 3px rgba(14, 106, 86, .12); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 14%, transparent); }
 .amal-x.wide { width: auto; padding: 0 12px; font-size: .95rem; }
@@ -699,6 +696,7 @@ details summary { min-height: 44px; display: flex; align-items: center; cursor: 
       <p class="muted"><span role="img" aria-label="سجدة">🧎‍♂️</span> بجانب رقم الجزء يعني أن فيه آية سجدة تلاوة (السجدة، فصلت، النجم، العلق).</p>
 
       <ul id="rows" class="rows"></ul>
+      <button id="ttBtn" class="btn tt-btn" type="button">🤲 تثويب الختمة</button>
     </section>
 
   </main>
@@ -712,6 +710,23 @@ details summary { min-height: 44px; display: flex; align-items: center; cursor: 
       <div class="sheet-actions">
         <button id="copyBtn" class="btn primary" type="button">نسخ الدعاء</button>
         <button id="closeBtn" class="btn" type="button">إغلاق</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- تثويب الختمة -->
+  <div id="ttModal" class="overlay" hidden>
+    <div class="sheet amal-sheet" role="dialog" aria-modal="true" aria-labelledby="ttTitle">
+      <div class="amal-head">
+        <h3 id="ttTitle">تثويب الختمة</h3>
+        <button id="ttX" class="amal-x" type="button" aria-label="إغلاق">✕</button>
+      </div>
+      <div id="ttText" class="tt-text"></div>
+      <p id="ttDoneNote" class="tt-done-note" hidden>✅ تمت القراءة</p>
+      <div class="sheet-actions">
+        <button id="ttDone" class="btn primary" type="button">تمت القراءة</button>
+        <button id="ttUndo" class="link-btn" type="button" hidden>تراجع</button>
+        <button id="ttClose" class="btn" type="button">إغلاق</button>
       </div>
     </div>
   </div>
@@ -1784,6 +1799,7 @@ function renderDay() {
   extraEl.className = 'extra-title ' + titleInfo.cls;
   extraEl.textContent = titleInfo.text;
   renderQadr(day);
+  renderTt();
   renderNav();
   renderMeBar();
   $('memberHeaderNote').textContent = ctx.member ? '🌙 أهلاً بك، قراءة اليوم ' + day + ' من رمضان' : '🌙 لوحة متابعة المدير';
@@ -1950,6 +1966,37 @@ function openAmal() {
   requestAnimationFrame(() => { sheet.scrollTop = 0; });
 }
 
+const TT_TEXT = "بسم الله الرحمن الرحيم\n\nصدق الله العلي العظيم وصدق رسوله النبي الكريم، وصدق علي بن أبي طالب أمير المؤمنين وصدق الحسن والحسين سيدا شباب أهل الجنة أجمعين، وصدقت الائمة التسعة من ذرية الحسين عليهم السلام أجمعين وصدقت الأنبياء والمرسلين صلوات الله عليهم أجمعين ونحن على ذلك من الشاهدين والشاكرين لا مغيرين ولا مبدلين، مقرين غير جاحدين والحمد لله رب العالمين وصلى الله على محمد وآله الطاهرين.\n\nوأوصل اللهم ثواب ما قرأناه وأجر وبركات ما تلوناه من كتابك العزيز المنزل، على لسان نبيك المرسل هدية واصلة وتحفة شاملة ورحمة نازلة إلى روح وضريح سيدنا ونبينا محمد المصطفى وإلى روح وضريح سيدنا ومولانا علي المرتضى وضريح مولاتنا فاطمة الزهراء وإلى روح وضريح الحسن والحسين سيدا شباب أهل الجنة، وإلى أرواح وضرائح الأئمة النجباء صلوات الله عليهم أجمعين وإلى أرواح الأنبياء والأوصياء والصالحين والشهداء، وإلى ارواح وضرائح :\nمحمد عبد مطر\nعبد مطر\nلطيف عبد\nمطر طوفان\nزهره مطر\nسكينه مطر\nنزيلة طارش\nطوفان لطيف\nريسان عبود\nحليمة عبود\nنعيمه خلف\nنادية كامل\nكريم خلف\nصالح خلف\nصاحب مطر\nغيضه حمزه\nناصر عبدالحسين\nفاطمه ناصر عبدالحسين\nرضا ناصر عبدالحسين\nحسن عبدالهادي\nسميره شاكر\nنعيمه قاسم\nمصطفى عمران\nرهيف منشد\nفاطمه خالد رهيف\nداخل طارش\nكاظم داخل\nساجت حسين\nكامل حسين\nحسين علي\nخلف بنيان\nعبود حمزه\nصليلة حسن\nنصرة عبود\nقاسم حسن\nتقي محمد\nرباب محمد\nعبدالمحسن قاسم\nقاسم عبدالمحسن\nكريمة ساجت\nاكظيمه ساجت\nعامر عبدالخضر\nراتب ناصر\nسكنه جابر\nزهره حسن\nزكية عيسى\nمنى حسين\nحبيبة علي\nزكية خلف\nحنان حمد\nحسن عبدالكريم قاسم\nعبدالامير داوود\nمكية منصور\nوالى جميع اموات المؤمنين و المؤمنات\n\nاللهم أجعل في قبرهم الضياء والنور والفسحة والسرور والكرامة والحبور والمسك والكافور والولدان والحور، أنقلهم اللهم من ضيق القبور إلى سعة الدور والقصور في سدر مخضود وطلح منضود وظل ممدود وماء مسكوب وفاكهة كثيرة لا مقطوعة ولا ممنوعة وفرش مرفوعة مع الذين أنعمت عليهم من النبيين والشهداء والصالحين وحسن أولئك رفيقا، ذلك الفضل من الله وكفى بالله عليما.\nاللهم صلي على محمد وآل محمد ولا تجعل القرآن العظيم بنا ولا بهم ماحلا ولا الصراط المستقيم بنا ولا بهم زالا وكن اللهم لنا ولهم جارا بعد الجيران وخدنا بعد الاخذان وحبيبا بعد الاحباء ومؤنسا بعد المؤنسين .\nما أتوك اللهم به من عمل صالح فتقبله منهم ضاعفه لهم وما أتوك اللهم به من عمل سيء فتجاوز اللهم عنهم وأغفر لهم، وجازفهم اللهم في الحساب مجازفة ولا تناقشهم مناقشه، خفف اللهم لنا ولهم ثقل الثرى و لاتنسانا وإياهم من رحمتك إذا طال المدى وانقطع من وصلنا حبل الرجاء أننا إليك يا رباه راغبون وبك واثقون، وللخيرات مما عندك طالبون فإذا رفعنا اللهم أيدينا وأبصارنا لجلال وجهك الكريم فلا تردنا خائبين ولو كنا مذنبين بل نحن يا رباه مذنبون، ارزقنا سعادة الدنيا والدين وحرم وجوهنا ووجوه آبائنا وأمهاتنا والمؤمنين والمؤمنات على النار أجمعين، وأدخلنا الجنة آمنين لا خزايا ولا نادمين واسقنا اللهم شربة روية من حوض محمد النبي الأمين من كف سيدنا ومولانا علي بن أبي طالب أمير المؤمنين، وأجعلنا اللهم من أهل دار دعواهم فيها سبحانك اللهم وتحيتهم فيها سلام وآخر دعواهم أن الحمد لله رب العالمين وصلى الله على محمد وآله الطاهرين وخير صحبه أجمعين";
+const TT_PREFIX = 'khatma-tt-';
+function ttKey() { return TT_PREFIX + K.key + '-' + ctx.day + '-' + (getMeId() || 'admin'); }
+function ttIsDone() { return ls.get(ttKey()) === '1'; }
+function renderTt() {
+  const b = $('ttBtn');
+  const d = ttIsDone();
+  b.classList.toggle('done', d);
+  b.textContent = d ? '✅ تثويب الختمة' : '🤲 تثويب الختمة';
+}
+function renderTtModal() {
+  const d = ttIsDone();
+  $('ttDone').hidden = d;
+  $('ttUndo').hidden = !d;
+  $('ttDoneNote').hidden = !d;
+}
+function openTt() {
+  $('ttText').textContent = TT_TEXT;
+  renderTtModal();
+  $('ttModal').hidden = false;
+  const sheet = $('ttModal').querySelector('.sheet');
+  $('ttClose').focus({ preventScroll: true });
+  sheet.scrollTop = 0;
+  requestAnimationFrame(() => { sheet.scrollTop = 0; });
+}
+function closeTt() { $('ttModal').hidden = true; }
+function ttSet(v) {
+  if (v) ls.set(ttKey(), '1'); else { try { localStorage.removeItem(ttKey()); } catch (e) { /* تجاهل */ } }
+  renderTt(); renderTtModal();
+}
+
 function closeAmal() {
   $('amalModal').hidden = true;
 }
@@ -2007,7 +2054,7 @@ const Q_PREFIX = 'khatma-q1-';
 // يرجع الآية بدون البسملة إن كانت في أولها، وإلا null
 function stripBism(t) {
   const w = t.split(' ');
-  if (w.length > 4 && w.slice(0, 4).join(' ').replace(/[\u0640ً-ٰٟ]/g, '') === BISM_KEY) return w.slice(4).join(' ').trim();
+  if (w.length > 4 && w.slice(0, 4).join(' ').replace(/[ً-ٰٟ]/g, '') === BISM_KEY) return w.slice(4).join(' ').trim();
   return null;
 }
 let quranReady = null;
@@ -2646,11 +2693,11 @@ $('rdQx').addEventListener('click', () => { $('rdSearch').hidden = true; if (kvQ
 const KSR = window.SpeechRecognition || window.webkitSpeechRecognition;
 let kvRec = null, kvIdx = null, kvPos = -1, kvRestart = 0, kvFirst = true, kvErrN = 0, kvWatch = 0, kvMiss = 0, kvCurV = null, kvJumping = false, kvgBusy = false, kvg = null;
 const kvSleep = (ms) => new Promise((r) => setTimeout(r, ms));
-let kvFix = false;
+let kvFix = false; try { kvFix = localStorage.getItem('kvfix') === '1'; } catch (e) { /* تجاهل */ }
 let kvLearn = {}; try { kvLearn = JSON.parse(localStorage.getItem('kvlearn') || '{}') || {}; } catch (e) { kvLearn = {}; }
-let kvMU = null, kvPrevBuf = [], kvCurHeard = [], kvBase = 0, kvFullLen = 0, kvRawLen = 0;
+let kvMU = null, kvPrevBuf = [], kvCurHeard = [];
 let kvIdleT = 0;
-const KV_IDLE = 60000; // إيقاف المايك تلقائيًا إذا لم تُسمع قراءة دقيقة
+const KV_IDLE = 30000; // إيقاف المايك تلقائيًا إذا لم تُسمع قراءة ٣٠ ثانية
 function kvIdleArm() { clearTimeout(kvIdleT); if (kvOn) kvIdleT = setTimeout(() => { if (kvOn) kvStop('توقف المايك لعدم القراءة'); }, KV_IDLE); }
 let kvLastG = 0, kvLearnT = 0, kvHits = new Set(), kvFinalN = -1, kvMissedN = 0, kvAdv = false, kvCmdPos = 0, kvCmdT = 0, kvEndT = 0, kvWake = null, kvPairs = [], kvScore = 0, kvSeen = new Set(), kvHitsTmp = [];
 function kvLearnAdd(pairs) {
@@ -2774,9 +2821,9 @@ function kvMark(v, add) {
   v.insertBefore(frag, nodes[0]); nodes.forEach((n) => n.remove()); kvMissedN += fresh;
 }
 async function kvWaitRender(J) { for (let i = 0; i < 80; i++) { if (readerJuz === J && $('readerBody').querySelector('.v')) return true; await kvSleep(100); } return false; }
-function kvReset(base) { kvCmdPos = Math.max(kvCmdPos, kvRawLen); kvBase = (base === undefined ? kvFullLen : base); kvCurHeard = []; kvPrevBuf = []; clearTimeout(kvEndT); kvIdx = null; kvPos = -1; kvHits = new Set(); kvFinalN = -1; kvMU = null; if (kvCurV) { kvCurV.classList.remove('cur'); kvCurV = null; } }
+function kvReset() { clearTimeout(kvEndT); kvIdx = null; kvPos = -1; kvHits = new Set(); kvFinalN = -1; kvMU = null; if (kvCurV) { kvCurV.classList.remove('cur'); kvCurV = null; } }
 async function kvAdvance(force) {
-  if (kvAdv || kvJumping) return; kvAdv = true; kvJumping = true; const base0 = kvFullLen;
+  if (kvAdv || kvJumping) return; kvAdv = true; kvJumping = true;
   try {
     kvBuild(); kvMarkPass(kvIdx.words.length, kvWin());
     const J = readerJuz, btn = $('readerNext');
@@ -2787,45 +2834,38 @@ async function kvAdvance(force) {
     asStop();
     if (!btn.hidden && btn.dataset.act === 'next') onReaderNext(); else await openReader(nx, readerMember);
     await kvWaitRender(nx); $('readerScroll').scrollTop = 0;
-    kvReset(base0); kvBuild();
-    kvMsg('الجزء ' + arDigits(nx) + '. تابع القراءة'); jumpToast('الجزء ' + arDigits(nx));
+    kvReset(); kvBuild();
+    kvMsg('الجزء ' + arDigits(nx) + '. تابع القراءة');
   } finally { kvJumping = false; kvAdv = false; kvMiss = 0; }
 }
 const KVNUM = {واحد:1,واحده:1,احد:1,اثنين:2,اثنان:2,اثنا:2,ثنتين:2,ثلاثه:3,اربعه:4,خمسه:5,سته:6,سبعه:7,ثمانيه:8,تسعه:9,عشره:10,عشر:10,عشرين:20,ثلاثين:30,اربعين:40,خمسين:50,ستين:60,سبعين:70,ثمانين:80,تسعين:90,مئه:100,ميه:100,مائه:100,مئتين:200,اول:1,ثاني:2,ثالث:3,رابع:4,خامس:5,سادس:6,سابع:7,ثامن:8,تاسع:9,عاشر:10,حادي:1,عشرون:20,ثلاثون:30};
 function kvNumOf(str) {
   if (/^\d+$/.test(str)) return Number(str);
   let sum = 0, ok = false;
-  for (const t of str.split(' ')) { let u = t; if (KVNUM[u] === undefined) u = u.replace(/^و(?=..)/, ''); if (KVNUM[u] === undefined) u = u.replace(/^ال(?=..)/, ''); if (KVNUM[u] !== undefined) { sum += KVNUM[u]; ok = true; } else break; }
+  for (const t of str.split(' ')) { let u = t; if (KVNUM[u] === undefined) u = u.replace(/^و(?=..)/, ''); if (KVNUM[u] === undefined) u = u.replace(/^ال(?=..)/, ''); if (KVNUM[u] !== undefined) { sum += KVNUM[u]; ok = true; } else if (!ok) return 0; }
   return ok ? sum : 0;
 }
-function kvNumStrict(str){ // كل الكلمات يجب أن تكون أرقامًا
-  let sum=0; const ts=str.trim().split(' ').filter(Boolean); if(!ts.length) return 0;
-  for (const t of ts){ let u=t; if(KVNUM[u]===undefined) u=u.replace(/^و(?=..)/,''); if(KVNUM[u]===undefined) u=u.replace(/^ال(?=..)/,''); if(KVNUM[u]===undefined) return 0; sum+=KVNUM[u]; }
-  return sum;
-}
-let kvLastJuz = null;
-function kvNormD(s) { s = s.replace(/[٠-٩]/g, (c) => String.fromCharCode(c.charCodeAt(0) - 1584)); return s.split(/(\d+)/).map((x, i) => (i % 2 ? ' ' + x + ' ' : kvNorm(x))).join(' ').replace(/\s+/g, ' ').trim(); }
+function kvNormD(s) { return kvNorm(s.replace(/[٠-٩]/g, (c) => String.fromCharCode(c.charCodeAt(0) - 1632)).replace(/\d+/g, (m) => ' #' + m + '# ')).replace(/#/g, ''); }
 function kvSurahByName(txt) {
   const c = (x) => kvNorm(x).replace(/^ال/, '').replace(/ /g, '');
   const t = c(txt); if (!t) return 0;
   for (let n = 1; n <= 114; n++) { const nm = c(RD_NAMES[n - 1]); if (nm === t || (t.length >= 4 && kvEq(t, nm))) return n; }
   return 0;
 }
-async function kvGoTo(S, A, base) {
-  if (kvJumping) return; kvJumping = true; if (base === undefined) base = kvFullLen;
+async function kvGoTo(S, A) {
+  if (kvJumping) return; kvJumping = true;
   try {
     if (!RD_AYAH_JUZ[S + ':' + A]) A = 1;
     const J = RD_AYAH_JUZ[S + ':' + A];
     asStop();
     await openReader(J, readerMember, { s: S, a: A });
-    await kvWaitRender(J); kvReset(base); kvBuild();
-    kvMsg('الانتقال إلى سورة ' + RD_NAMES[S - 1] + ' · آية ' + arDigits(A)); jumpToast('سورة ' + RD_NAMES[S - 1] + ' · الجزء ' + arDigits(J));
+    await kvWaitRender(J); kvReset(); kvBuild();
+    kvMsg('الانتقال إلى سورة ' + RD_NAMES[S - 1] + ' · آية ' + arDigits(A));
   } finally { kvJumping = false; kvMiss = 0; }
 }
-async function kvGoJuz(J, tries, base) {
-  if (base === undefined) base = kvFullLen;
-  if (kvJumping) { if ((tries || 0) < 8) setTimeout(() => kvGoJuz(J, (tries || 0) + 1, base), 500); return; } kvJumping = true;
-  try { asStop(); await openReader(J, readerMember); await kvWaitRender(J); $('readerScroll').scrollTop = 0; kvReset(base); kvBuild(); kvMsg('الانتقال إلى الجزء ' + arDigits(J)); jumpToast('الجزء ' + arDigits(J)); }
+async function kvGoJuz(J) {
+  if (kvJumping) return; kvJumping = true;
+  try { asStop(); await openReader(J, readerMember); await kvWaitRender(J); $('readerScroll').scrollTop = 0; kvReset(); kvBuild(); kvMsg('الانتقال إلى الجزء ' + arDigits(J)); }
   finally { kvJumping = false; kvMiss = 0; }
 }
 function kvCommand(txt) {
@@ -2840,29 +2880,16 @@ function kvCommand(txt) {
     return true;
   }
   if (/ (?:ال)?جز (التالي|القادم)$/.test(tail)) { kvCmdPos = raw.length; kvAdvance(); return true; }
-  {
-    let jidx = -1, jlen = 0, mm; const re = / (?:ال)?جز(?= |$)/g;
-    while ((mm = re.exec(tail))) { jidx = mm.index; jlen = mm[0].length; }
-    if (jidx >= 0) {
-      const rest = tail.slice(jidx + jlen).trim(); if (!rest) return false;
-      const N = kvNumOf(rest.split(' ').slice(0, 3).join(' ')); if (!(N >= 1 && N <= 30)) return false;
-      clearTimeout(kvCmdT);
-      const delay = (!/^\d+$/.test(rest.split(' ')[0]) && N < 10) ? 2000 : 900;
-      const L1 = raw.length, B1 = kvFullLen; kvCmdT = setTimeout(() => { if (!kvOn) return; kvCmdPos = L1; kvLastJuz = { N, t: Date.now() }; kvGoJuz(N, 0, B1); }, delay); return true;
-    }
-    if (kvLastJuz && kvLastJuz.N < 10 && Date.now() - kvLastJuz.t < 8000) {
-      const v = kvNumStrict(tail); if ((v === 10 || v === 20 || v === 30) && kvLastJuz.N + v <= 30) { const N2 = kvLastJuz.N + v; kvLastJuz = null; kvCmdPos = raw.length; kvGoJuz(N2, 0, kvFullLen); return true; }
-    }
-  }
-  if (false) { let N = 0;
+  if ((m = tail.match(/ (?:(?:اذهب|انتقل|افتح) (?:الي )?)?(?:ال)?جز (\S+(?: \S+){0,2})$/))) {
+    clearTimeout(kvCmdT); const N = kvNumOf(m[1]); if (!(N >= 1 && N <= 30)) return false;
     const L1 = raw.length; kvCmdT = setTimeout(() => { if (!kvOn) return; kvCmdPos = L1; kvGoJuz(N); }, 900); return true;
   }
   if ((m = tail.match(/ (?:(?:اذهب|انتقل|افتح) (?:الي )?)?سوره (\S+(?: \S+){0,2}?)(?: ايه (.+))?$/))) {
     clearTimeout(kvCmdT);
     const S = kvSurahByName(m[1]); if (!S) return false;
     const A = m[2] ? (kvNumOf(m[2]) || 1) : 1;
-    const L0 = raw.length, B0 = kvFullLen;
-    kvCmdT = setTimeout(() => { if (!kvOn) return; kvCmdPos = L0; kvGoTo(S, A, B0); }, 900);
+    const L0 = raw.length;
+    kvCmdT = setTimeout(() => { if (!kvOn) return; kvCmdPos = L0; kvGoTo(S, A); }, 900);
     return true;
   }
   return false;
@@ -2870,9 +2897,7 @@ function kvCommand(txt) {
 function kvHandle(e) {
   if (kvJumping) return;
   let txt = ''; for (let i = 0; i < e.results.length; i++) txt += ' ' + e.results[i][0].transcript;
-  const rawN = kvNormD(txt), all = rawN.split(' ').filter(Boolean); kvFullLen = all.length; kvRawLen = rawN.length;
-  if (kvBase > all.length) kvBase = all.length;
-  const heard = all.slice(kvBase); if (!heard.length) return;
+  const heard = kvNorm(txt).split(' ').filter(Boolean); if (!heard.length) return;
   kvCurHeard = heard; kvIdleArm();
   kvMsg('المسموع: ' + heard.slice(-6).join(' '));
   kvBuild();
@@ -2937,8 +2962,8 @@ function kvgFind(H, minRun, key) {
   if (best) best.verses = verses;
   return best;
 }
-async function kvJump(p, track, base) {
-  if (kvJumping) return; kvJumping = true; if (base === undefined) base = kvFullLen;
+async function kvJump(p, track) {
+  if (kvJumping) return; kvJumping = true;
   try {
     const S = kvg.s[p], A = kvg.a[p], J = kvg.j[p], K = kvg.k[p];
     asStop();
@@ -2950,7 +2975,7 @@ async function kvJump(p, track, base) {
       if (e) { e.scrollIntoView({ block: 'center' }); e.classList.add('jump'); setTimeout(() => e.classList.remove('jump'), 2000); }
     }
     if (track && kvOn) {
-      kvReset(base); kvBuild();
+      kvIdx = null; kvBuild();
       let wi = kvIdx.words.findIndex((x) => x.k === K && Number(kvIdx.vs[x.vi].dataset.s) === S && Number(kvIdx.vs[x.vi].dataset.a) === A);
       if (wi < 0) wi = kvIdx.words.findIndex((x) => Number(kvIdx.vs[x.vi].dataset.s) === S && Number(kvIdx.vs[x.vi].dataset.a) === A);
       if (wi >= 0) { kvPos = wi; kvShow(wi); }
@@ -2959,7 +2984,7 @@ async function kvJump(p, track, base) {
   } finally { kvJumping = false; kvMiss = 0; }
 }
 async function kvTryGlobal(heard, loc) {
-  if (kvgBusy || kvJumping) return; kvgBusy = true; const base0 = kvFullLen;
+  if (kvgBusy || kvJumping) return; kvgBusy = true;
   try {
     if (!kvg) { kvMsg('جارٍ تجهيز البحث…'); await kvgBuild((n) => kvMsg('جارٍ تجهيز البحث… ' + arDigits(n) + ' / ٣٠')); }
     const key = kvCurKey();
@@ -2969,11 +2994,11 @@ async function kvTryGlobal(heard, loc) {
       if (!res) continue;
       if (loc !== undefined) {
         const cw = (kvIdx && kvPos >= 0) ? kvIdx.vs[kvIdx.words[kvPos].vi] : null, ck = cw ? Number(cw.dataset.s) * 1000 + Number(cw.dataset.a) : -1;
-        if (res.run >= Math.max(4, loc + 2) && !(res.verses.size === 1 && res.verses.has(ck))) { if (kvOn) await kvJump(res.end, true, base0); return; }
+        if (res.run >= Math.max(4, loc + 2) && !(res.verses.size === 1 && res.verses.has(ck))) { if (kvOn) await kvJump(res.end, true); return; }
         continue;
       }
       if (res.run >= 4 || (res.verses.size === 1 && res.run >= 2 && H.join('').length >= 6 && kvMiss >= 3)) {
-        if (kvOn) await kvJump(res.end, true, base0);
+        if (kvOn) await kvJump(res.end, true);
         return;
       }
     }
@@ -2982,7 +3007,7 @@ async function kvTryGlobal(heard, loc) {
 }
 function kvStart() {
   if (!KSR) { rdNote('المتصفح لا يدعم التعرف على الصوت.'); return; }
-  asStop(); kvIdx = null; kvBuild(); kvOn = true; kvIdleArm(); $('readerModal').classList.add('vo'); kvPos = -1; kvHits = new Set(); kvFinalN = -1; kvMU = null; kvPrevBuf = []; kvCurHeard = []; kvMissedN = 0; kvCmdPos = 0; kvAdv = false; kvBase = 0; kvFullLen = 0; kvRawLen = 0;
+  asStop(); kvIdx = null; kvBuild(); kvOn = true; kvIdleArm(); kvPos = -1; kvHits = new Set(); kvFinalN = -1; kvMU = null; kvPrevBuf = []; kvCurHeard = []; kvMissedN = 0; kvCmdPos = 0; kvAdv = false;
   document.querySelectorAll('#readerBody .w.miss').forEach((x) => x.replaceWith(document.createTextNode(x.textContent))); document.querySelectorAll('#readerBody .v').forEach((v) => { v._miss = null; }); $('readerBody').normalize(); kvIdx = null; kvBuild(); kvWakeOn();
   rdCurSet.forEach((v) => v.classList.remove('cur')); rdCurSet = new Set();
   $('rdMicBar').hidden = false; kvMsg('جارٍ تشغيل الميكروفون…');
@@ -2993,7 +3018,7 @@ function kvRun() {
   if (!kvOn) return;
   clearTimeout(kvWatch);
   const r = new KSR(); kvRec = r; r.lang = 'ar-SA'; r.continuous = true; r.interimResults = true; r.maxAlternatives = 1;
-  r.onstart = () => { clearTimeout(kvWatch); kvErrN = 0; kvCmdPos = 0; kvBase = 0; kvFullLen = 0; kvRawLen = 0; kvSeen = new Set(); kvPrevBuf = kvPrevBuf.concat(kvCurHeard).slice(-60); kvCurHeard = []; if (kvFirst || /^(جار|إعادة)/.test($('rdMicTxt').textContent)) kvMsg('ابدأ القراءة، أو قل: سورة …'); kvFirst = false; };
+  r.onstart = () => { clearTimeout(kvWatch); kvErrN = 0; kvCmdPos = 0; kvSeen = new Set(); kvPrevBuf = kvPrevBuf.concat(kvCurHeard).slice(-60); kvCurHeard = []; if (kvFirst || /^(جار|إعادة)/.test($('rdMicTxt').textContent)) kvMsg('ابدأ القراءة، أو قل: سورة …'); kvFirst = false; };
   r.onspeechstart = () => { kvIdleArm(); if (/^(ابدأ|إعادة)/.test($('rdMicTxt').textContent)) kvMsg('جارٍ الاستماع…'); };
   r.onresult = (e) => { kvErrN = 0; kvHandle(e); };
   r.onnomatch = () => { kvMsg('أعد القراءة'); };
@@ -3013,7 +3038,7 @@ function kvRun() {
 function kvStop(msg) {
   clearTimeout(kvEndT); clearTimeout(kvIdleT); const was = kvOn; kvWakeOff(); clearTimeout(kvCmdT);
   if (!msg && was && kvMissedN) msg = 'كلمات لم تُسمع: ' + arDigits(kvMissedN) + '. ظُلّلت بالبرتقالي';
-  kvOn = false; $('readerModal').classList.remove('vo'); clearTimeout(kvRestart); clearTimeout(kvWatch);
+  kvOn = false; clearTimeout(kvRestart); clearTimeout(kvWatch);
   if (kvRec) { try { kvRec.onend = null; kvRec.abort(); } catch (e) {} kvRec = null; }
   $('rdMicBar').hidden = true;
   if (msg && !$('readerModal').hidden) { kvMsg(msg); $('rdMicBar').hidden = false; setTimeout(() => { if (!kvOn) $('rdMicBar').hidden = true; }, 8000); }
@@ -3021,35 +3046,6 @@ function kvStop(msg) {
   rdCurSet = new Set();
   if (was) rdSchedule();
 }
-// ===== إخفاء ترويسة القراءة بعد ٣٠ ثانية، وتنبيه الأرقام، وإيقاف المايك عند الإغلاق =====
-const rdHead = $('readerModal').querySelector('.amal-head'), rdLbl = document.createElement('div'), toastEl = document.createElement('div');
-rdLbl.id = 'rdLabel'; rdLbl.hidden = true; toastEl.id = 'jToast'; toastEl.hidden = true; document.body.append(rdLbl, toastEl);
-let rdLast = Date.now(), rdWasOpen = false, toastT = 0;
-function jumpToast(t) { toastEl.textContent = t; toastEl.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => { toastEl.hidden = true; }, 2600); }
-function rdLabelUpdate() { if (rdLbl.hidden) return; let s = 0; try { const v = rdVerseAt(); if (v) s = Number(v.dataset.s); } catch (e) { /* تجاهل */ } rdLbl.textContent = (s ? RD_NAMES[s - 1] + ' · ' : '') + 'الجزء ' + arDigits(readerJuz); }
-function rdHdrHide() { if (rdHead.classList.contains('hid')) return; const h = rdHead.offsetHeight, sc = $('readerScroll'); rdHead.classList.add('hid'); sc.scrollTop = Math.max(0, sc.scrollTop - h); rdLbl.hidden = false; rdLabelUpdate(); }
-function rdHdrShow() { if (!rdHead.classList.contains('hid')) return; rdHead.classList.remove('hid'); $('readerScroll').scrollTop += rdHead.offsetHeight; rdLbl.hidden = true; rdLast = Date.now(); }
-setInterval(() => {
-  const open = !$('readerModal').hidden;
-  if (open && !rdWasOpen) rdLast = Date.now();
-  if (!open) { rdHead.classList.remove('hid'); rdLbl.hidden = true; }
-  else if (rdHead.classList.contains('hid')) rdLabelUpdate();
-  else if (Date.now() - rdLast > 30000 && $('rdSet').hidden && $('rdFont').hidden) rdHdrHide();
-  rdWasOpen = open;
-}, 1000);
-['touchstart', 'pointerdown'].forEach((ev) => $('readerModal').addEventListener(ev, () => { if (!rdHead.classList.contains('hid')) rdLast = Date.now(); }, { passive: true }));
-let rdTapT = 0, rdTapX = 0, rdTapY = 0;
-$('readerScroll').addEventListener('touchend', (e) => {
-  if (e.target.closest && e.target.closest('button, select, input, .rd-pop')) return;
-  const t = e.changedTouches[0], now = Date.now();
-  if (now - rdTapT < 350 && Math.hypot(t.clientX - rdTapX, t.clientY - rdTapY) < 40) { rdTapT = 0; if (rdHead.classList.contains('hid')) rdHdrShow(); else rdHdrHide(); }
-  else { rdTapT = now; rdTapX = t.clientX; rdTapY = t.clientY; }
-}, { passive: true });
-rdLbl.addEventListener('click', rdHdrShow);
-addEventListener('pagehide', () => { if (kvOn) kvStop('تم الإيقاف'); });
-addEventListener('beforeunload', () => { if (kvOn) kvStop('تم الإيقاف'); });
-let kvHidT = 0;
-document.addEventListener('visibilitychange', () => { clearTimeout(kvHidT); if (document.hidden && kvOn) kvHidT = setTimeout(() => { if (document.hidden && kvOn) kvStop('تم الإيقاف'); }, 10000); });
 $('rdMic').addEventListener('click', () => { if (kvOn) kvStop(); else kvStart(); });
 function kvFixUi() { $('rdFix').textContent = '✏️ تصحيح القراءة: ' + (kvFix ? 'مفعّل' : 'معطّل'); }
 kvFixUi();
@@ -3154,10 +3150,10 @@ async function onQuranFile(e) {
       v.forEach((x) => { n['s' + x[0]] = names[String(x[0])] || String(x[0]); });
       await dbPut('/quran/juz/' + j, { n: n, v: v }, ADMIN_ROOT, 60000);
     }
-    await dbPut('/quran/ready', { version: 3, verses: 6236 }, ADMIN_ROOT);
+    await dbPut('/quran/ready', { version: 2, verses: 6236 }, ADMIN_ROOT);
     for (let j = 1; j <= 30; j++) { try { localStorage.removeItem(Q_PREFIX + j); } catch (_) { /* تجاهل */ } }
     quranReady = true;
-    quranVer = 3;
+    quranVer = 2;
     setNet(true);
     prog.textContent = 'تم رفع نص القرآن كاملاً ✓';
     updateQuranState();
@@ -3231,7 +3227,7 @@ function clearLocalProgress() {
     const ks = [];
     for (let i = 0; i < localStorage.length; i++) {
       const k = localStorage.key(i);
-      if (k && (k.indexOf(JD_PREFIX) === 0 || k.indexOf(BM_PREFIX) === 0)) ks.push(k);
+      if (k && (k.indexOf(JD_PREFIX) === 0 || k.indexOf(BM_PREFIX) === 0 || k.indexOf(TT_PREFIX) === 0)) ks.push(k);
     }
     ks.forEach((k) => localStorage.removeItem(k));
   } catch (e) { /* تجاهل */ }
@@ -3706,6 +3702,12 @@ $('dfsMinus').addEventListener('click', () => changeDfs(-0.15));
 $('dfsPlus').addEventListener('click', () => changeDfs(0.15));
 $('duasModal').addEventListener('click', (e) => { if (e.target === $('duasModal')) closeDuas(); });
 $('amalClose').addEventListener('click', closeAmal);
+$('ttBtn').addEventListener('click', openTt);
+$('ttX').addEventListener('click', closeTt);
+$('ttClose').addEventListener('click', closeTt);
+$('ttDone').addEventListener('click', () => { ttSet(true); closeTt(); toast('تقبّل الله، تم تسجيل التثويب ✅'); });
+$('ttUndo').addEventListener('click', () => ttSet(false));
+$('ttModal').addEventListener('click', (e) => { if (e.target === $('ttModal')) closeTt(); });
 $('amalX').addEventListener('click', closeAmal);
 $('readerX').addEventListener('click', closeReader);
 $('readerClose').addEventListener('click', closeReader);
@@ -3729,6 +3731,7 @@ document.addEventListener('keydown', (e) => {
   if (!$('readerModal').hidden) closeReader();
   else if (!$('duasModal').hidden) closeDuas();
   else if (!$('amalModal').hidden) closeAmal();
+  else if (!$('ttModal').hidden) closeTt();
   else if (!$('modal').hidden) closeModal();
   else if (!$('pickModal').hidden) closePicker();
 });
@@ -3783,7 +3786,7 @@ makeConfirm($('bothResetBtn'),
   () => wipeDone([KHATMAS.main.path, KHATMAS.youth.path]));
 
 /* منع تمرير الصفحة الخلفية أثناء فتح أي نافذة (قراءة، أعمال، دعاء، اختيار أجزاء) */
-const LOCK_IDS = ['modal', 'amalModal', 'readerModal', 'pickModal', 'duasModal', 'nameGate'];
+const LOCK_IDS = ['modal', 'ttModal', 'amalModal', 'readerModal', 'pickModal', 'duasModal', 'nameGate'];
 let lockY = 0, locked = false;
 function syncScrollLock() {
   const open = LOCK_IDS.some((id) => !$(id).hidden);
@@ -3804,12 +3807,6 @@ LOCK_IDS.forEach((id) => lockObs.observe($(id), { attributes: true, attributeFil
 buildDays();
 buildPicker();
 boot();
-</script>
-<script>
-// تسجيل ملف الخدمة للعمل بدون إنترنت (يعمل فقط على رابط الموقع الدائم)
-if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost') && !/htmlrunner|siteshare/i.test(location.hostname)) {
-  addEventListener('load', () => { navigator.serviceWorker.register('sw.js').catch(() => {}); });
-}
 </script>
 </body>
 </html>
