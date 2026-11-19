@@ -244,7 +244,7 @@ body.vo #fab{background:#d33!important;border-color:#d33!important}
     <button id="fab2" type="button" aria-label="استماع للقارئ">🎧</button>
     <button id="play" aria-label="تشغيل التمرير التلقائي">▶</button>
     <div class="speed">
-      <div class="lab"><span>بطيء</span><span id="spv"></span><span>سريع</span></div>
+      <div class="lab"><span>سريع</span><span id="spv"></span><span>بطيء</span></div>
       <input type="range" id="speed" min="5" max="120" step="1" value="30" aria-label="سرعة التمرير" dir="ltr">
     </div>
     <div class="apc"><button id="apPrev" type="button" aria-label="الآية السابقة">⏮</button><button id="apPlay" type="button" aria-label="تشغيل">▶</button><button id="apNextB" type="button" aria-label="الآية التالية">⏭</button></div>
@@ -763,7 +763,7 @@ $('instBtn').addEventListener('click',()=>{
   setPanel.hidden=true; $('instSheet').hidden=false;
 });
 let instAfter=null;
-$('verNote').textContent='الإصدار ٢٫١٨ · ١٧/١١/٢٠٢٦ · موقع';
+$('verNote').textContent='الإصدار ٢٫١٩ · ١٧/١١/٢٠٢٦ · موقع';
 $('instOk').addEventListener('click',()=>{ $('instSheet').hidden=true; if(instAfter){ const f=instAfter; instAfter=null; f(); } });
 $('instSheet').addEventListener('click',e=>{ if(e.target===$('instSheet')){ $('instSheet').hidden=true; instAfter=null; } });
 function showSheet(title,steps,okText,after){
